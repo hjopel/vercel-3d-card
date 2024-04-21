@@ -15,7 +15,16 @@ import {
   useSphericalJoint,
 } from '@react-three/rapier'
 import { MeshLineGeometry, MeshLineMaterial } from 'meshline'
-import { Environment, Lightformer } from '@react-three/drei'
+import {
+  Center,
+  Environment,
+  Lightformer,
+  PerspectiveCamera,
+  RenderTexture,
+  Resize,
+  Text3D,
+  useGLTF,
+} from '@react-three/drei'
 
 extend({ MeshLineGeometry, MeshLineMaterial })
 
@@ -26,6 +35,33 @@ declare module '@react-three/fiber' {
   }
 }
 
+const Text = () => {
+  return (
+    <>
+      <PerspectiveCamera makeDefault manual aspect={1.05} position={[0.49, 0.22, 2]} />
+      <mesh>
+        <planeGeometry />
+        <meshBasicMaterial transparent side={THREE.BackSide} />
+      </mesh>
+      <Center>
+        {/* <Resize maxHeight={0.45} maxWidth={0.925}>
+
+        </Resize> */}
+        <Text3D
+          bevelEnabled={false}
+          bevelSize={0}
+          height={0}
+          rotation={[0, Math.PI, Math.PI]}
+          font={'/Jacquard.json'}
+          size={0.3}
+        >
+          hjopel
+        </Text3D>
+      </Center>
+    </>
+  )
+}
+
 const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
   const band = useRef(),
     fixed = useRef<RapierRigidBody>(),
@@ -33,6 +69,10 @@ const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
     j2 = useRef<RapierRigidBody>(),
     j3 = useRef<RapierRigidBody>(),
     card = useRef<RapierRigidBody>()
+
+  const { nodes, materials } = useGLTF(
+    'https://assets.vercel.com/image/upload/contentful/image/e5382hct74si/5huRVDzcoDwnbgrKUo1Lzs/53b6dd7d6b4ffcdbd338fa60265949e1/tag.glb',
+  )
 
   const { width, height } = useThree((state) => state.size)
 
@@ -101,13 +141,30 @@ const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
         </RigidBody>
         <RigidBody ref={card} {...segmentProps} type={dragged ? 'kinematicPosition' : 'dynamic'}>
           <CuboidCollider args={[0.8, 1.125, 0.01]} />
-          <mesh
+          <group
             onPointerUp={(e) => drag(false)}
             onPointerDown={(e) => drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current.translation())))}
           >
-            <planeGeometry args={[0.8 * 2, 1.125 * 2]} />
-            <meshBasicMaterial color='white' side={THREE.DoubleSide} />
-          </mesh>
+            {/* <planeGeometry args={[0.8 * 2, 1.125 * 2]} />
+            <meshBasicMaterial color='white' side={THREE.DoubleSide} /> */}
+            <mesh geometry={nodes.card.geometry}>
+              <meshPhysicalMaterial
+                clearcoat={1}
+                clearcoatRoughness={0.15}
+                iridescence={1}
+                iridescenceIOR={1}
+                iridescenceThicknessRange={[0, 2400]}
+                metalness={0.5}
+                roughness={0.3}
+              >
+                <RenderTexture attach={'map'} height={2000} width={2000}>
+                  <Text />
+                </RenderTexture>
+              </meshPhysicalMaterial>
+            </mesh>
+            {/* <mesh geometry={nodes.clip.geometry} material={materials.metal} material-roughness={0.3} />
+            <mesh geometry={nodes.clamp.geometry} material={materials.metal} /> */}
+          </group>
         </RigidBody>
       </group>
 
@@ -121,7 +178,7 @@ const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
 export default function Page() {
   return (
     <>
-      <Canvas camera={{ position: [0, 0, 13], fov: 25 }}>
+      <Canvas camera={{ position: [0, 0, 6], fov: 25 }}>
         <ambientLight intensity={Math.PI} />
 
         <Physics interpolate gravity={[0, -40, 0]} timeStep={1 / 60}>
