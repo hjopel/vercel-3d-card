@@ -3,7 +3,7 @@
 import * as THREE from 'three'
 import dynamic from 'next/dynamic'
 import { Suspense, useRef, useState } from 'react'
-import { Canvas, extend, useThree, useFrame } from '@react-three/fiber'
+import { Canvas, extend, useThree, useFrame, MaterialNode, Object3DNode } from '@react-three/fiber'
 import {
   BallCollider,
   CuboidCollider,
@@ -18,6 +18,13 @@ import { MeshLineGeometry, MeshLineMaterial } from 'meshline'
 import { Environment, Lightformer } from '@react-three/drei'
 
 extend({ MeshLineGeometry, MeshLineMaterial })
+
+declare module '@react-three/fiber' {
+  interface ThreeElements {
+    meshLineGeometry: Object3DNode<MeshLineGeometry, typeof MeshLineGeometry>
+    meshLineMaterial: MaterialNode<MeshLineMaterial, typeof MeshLineMaterial>
+  }
+}
 
 const Band = () => {
   const band = useRef(),
