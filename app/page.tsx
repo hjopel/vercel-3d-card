@@ -26,7 +26,7 @@ declare module '@react-three/fiber' {
   }
 }
 
-const Band = () => {
+const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
   const band = useRef(),
     fixed = useRef<RapierRigidBody>(),
     j1 = useRef<RapierRigidBody>(),
@@ -46,6 +46,13 @@ const Band = () => {
   const rot = new THREE.Vector3()
   const dir = new THREE.Vector3()
   const [dragged, drag] = useState<THREE.Vector3 | false>()
+  const segmentProps = {
+    type: 'dynamic',
+    canSleep: true,
+    colliders: false,
+    angularDamping: 2,
+    linearDamping: 2,
+  } as RigidBodyProps
 
   useRopeJoint(fixed, j1, [[0, 0, 0], [0, 0, 0], 1])
   useRopeJoint(j1, j2, [[0, 0, 0], [0, 0, 0], 1])
@@ -55,12 +62,13 @@ const Band = () => {
     [0, 1.45, 0],
   ])
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     if (dragged) {
       vec.set(state.pointer.x, state.pointer.y, 0.5).unproject(state.camera)
       dir.copy(vec).sub(state.camera.position).normalize()
       vec.add(dir.multiplyScalar(state.camera.position.length()))
-      card.current.setNextKinematicTranslation({ x: vec.x - dragged.x, y: vec.y - dragged.y, z: vec.z - dragged.z })
+      ;[card, j1, j2, j3, fixed].forEach((ref) => ref.current?.wakeUp())
+      card.current?.setNextKinematicTranslation({ x: vec.x - dragged.x, y: vec.y - dragged.y, z: vec.z - dragged.z })
     }
 
     if (fixed.current) {
@@ -76,21 +84,22 @@ const Band = () => {
       card.current.setAngvel({ x: ang.x, y: ang.y - rot.y * 0.25, z: ang.z })
     }
   })
+  curve.curveType = 'chordal'
 
   return (
     <>
       <group position={[0, 4, 0]}>
         <RigidBody ref={fixed} type='fixed' />
-        <RigidBody position={[0.5, 0, 0]} ref={j1}>
+        <RigidBody position={[0.5, 0, 0]} ref={j1} {...segmentProps}>
           <BallCollider args={[0.1]} />
         </RigidBody>
-        <RigidBody position={[1, 0, 0]} ref={j2}>
+        <RigidBody position={[1, 0, 0]} ref={j2} {...segmentProps}>
           <BallCollider args={[0.1]} />
         </RigidBody>
-        <RigidBody position={[1.5, 0, 0]} ref={j3}>
+        <RigidBody position={[1.5, 0, 0]} ref={j3} {...segmentProps}>
           <BallCollider args={[0.1]} />
         </RigidBody>
-        <RigidBody ref={card} type={dragged ? 'kinematicPosition' : 'dynamic'}>
+        <RigidBody ref={card} {...segmentProps} type={dragged ? 'kinematicPosition' : 'dynamic'}>
           <CuboidCollider args={[0.8, 1.125, 0.01]} />
           <mesh
             onPointerUp={(e) => drag(false)}
