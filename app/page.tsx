@@ -2,7 +2,7 @@
 
 import * as THREE from 'three'
 import dynamic from 'next/dynamic'
-import { Suspense, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas, extend, useThree, useFrame, MaterialNode, Object3DNode } from '@react-three/fiber'
 import {
   BallCollider,
@@ -86,6 +86,14 @@ const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
   const rot = new THREE.Vector3()
   const dir = new THREE.Vector3()
   const [dragged, drag] = useState<THREE.Vector3 | false>()
+  const [hovered, hover] = useState(false)
+
+  useEffect(() => {
+    if (hovered) {
+      document.body.style.cursor = dragged ? 'grabbing' : 'grab'
+      return () => void (document.body.style.cursor = 'auto')
+    }
+  }, [hovered, dragged])
   const segmentProps = {
     type: 'dynamic',
     canSleep: true,
@@ -121,7 +129,7 @@ const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
       // Tilt the card back towards the screen
       ang.copy(card.current.angvel())
       rot.copy(card.current.rotation())
-      card.current.setAngvel({ x: ang.x, y: ang.y - rot.y * 0.25, z: ang.z })
+      card.current.setAngvel({ x: ang.x, y: ang.y - rot.y * 0.25, z: ang.z }, false)
     }
   })
   curve.curveType = 'chordal'
@@ -142,11 +150,14 @@ const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
         <RigidBody ref={card} {...segmentProps} type={dragged ? 'kinematicPosition' : 'dynamic'}>
           <CuboidCollider args={[0.8, 1.125, 0.01]} />
           <group
-            onPointerUp={(e) => drag(false)}
-            onPointerDown={(e) => drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current.translation())))}
+            onPointerOver={() => hover(true)}
+            onPointerOut={() => hover(false)}
+            onPointerUp={(e) => (e.target.releasePointerCapture(e.pointerId), drag(false))}
+            onPointerDown={(e) => (
+              e.target.setPointerCapture(e.pointerId),
+              drag(new THREE.Vector3().copy(e.point).sub(vec.copy(card.current.translation())))
+            )}
           >
-            {/* <planeGeometry args={[0.8 * 2, 1.125 * 2]} />
-            <meshBasicMaterial color='white' side={THREE.DoubleSide} /> */}
             <mesh geometry={nodes.card.geometry}>
               <meshPhysicalMaterial
                 clearcoat={1}
@@ -156,6 +167,7 @@ const Band = ({ maxSpeed = 50, minSpeed = 10 }) => {
                 iridescenceThicknessRange={[0, 2400]}
                 metalness={0.5}
                 roughness={0.3}
+                side={THREE.DoubleSide}
               >
                 <RenderTexture attach={'map'} height={2000} width={2000}>
                   <Text />
